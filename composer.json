@@ -1,0 +1,14 @@
+{
+    "name": "wp_barq/wp_barq",
+    "description": "A robust WordPress monitoring and backup system integrated with AWS.",
+    "type": "wordpress-plugin",
+    "require": {
+        "php": ">=7.4",
+        "aws/aws-sdk-php": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "WpBarq\\": "inc/"
+        }
+    }
+}

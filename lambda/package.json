@@ -1,0 +1,12 @@
+{
+  "name": "wp-barq-monitoring-lambda",
+  "version": "1.0.0",
+  "description": "AWS Lambda function to receive events from WP BARQ plugin, apply rate limits via DynamoDB, and trigger SNS alerts.",
+  "main": "index.js",
+  "type": "module",
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.0.0",
+    "@aws-sdk/client-sns": "^3.0.0",
+    "@aws-sdk/lib-dynamodb": "^3.0.0"
+  }
+}
