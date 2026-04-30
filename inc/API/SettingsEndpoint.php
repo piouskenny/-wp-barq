@@ -28,6 +28,7 @@ class SettingsEndpoint {
     public function get_settings() {
         return rest_ensure_response([
             'is_pro'        => get_option( 'wp_barq_is_pro', false ),
+            'plan'          => get_option( 'wp_barq_plan', 'free' ),
             'pro_emails'    => get_option( 'wp_barq_pro_emails', '' ),
             'monitor_faults'  => get_option( 'wp_barq_monitor_faults', true ),
             'monitor_backups' => get_option( 'wp_barq_monitor_backups', true ),
@@ -35,6 +36,10 @@ class SettingsEndpoint {
             'sns_faults'      => get_option( 'wp_barq_sns_faults', true ),
             'sns_backups'     => get_option( 'wp_barq_sns_backups', true ),
             'sns_health'      => get_option( 'wp_barq_sns_health', true ),
+            's3_region'       => get_option( 'wp_barq_s3_region', 'us-east-1' ),
+            's3_access_key'   => get_option( 'wp_barq_s3_access_key', '' ),
+            's3_secret_key'   => get_option( 'wp_barq_s3_secret_key' ) ? '********' : '',
+            's3_bucket'       => get_option( 'wp_barq_s3_bucket', '' ),
         ]);
     }
 
@@ -42,9 +47,10 @@ class SettingsEndpoint {
         $params = $request->get_params();
 
         $keys = [
-            'is_pro', 'pro_emails',
+            'is_pro', 'plan', 'pro_emails',
             'monitor_faults', 'monitor_backups', 'monitor_health',
-            'sns_faults', 'sns_backups', 'sns_health'
+            'sns_faults', 'sns_backups', 'sns_health',
+            's3_region', 's3_access_key', 's3_secret_key', 's3_bucket'
         ];
 
         foreach ( $keys as $key ) {

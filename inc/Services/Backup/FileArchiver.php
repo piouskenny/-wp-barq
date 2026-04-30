@@ -36,11 +36,40 @@ class FileArchiver {
                         continue;
                     }
 
+                    // Hybrid Control: Enforce file type restrictions
+                    $extension = strtolower( pathinfo( $file_path, PATHINFO_EXTENSION ) );
+                    $restricted_exts = ['mp4', 'mov', 'avi', 'zip', 'gz', 'tar', 'log'];
+                    if ( in_array( $extension, $restricted_exts ) ) {
+                        continue;
+                    }
+
+                    // Restricted directories
+                    if ( strpos( $relative_path, 'node_modules/' ) !== false || 
+                         strpos( $relative_path, '.git/' ) !== false ||
+                         strpos( $relative_path, 'cache/' ) !== false ) {
+                        continue;
+                    }
+
                     $zip->addFile( $file_path, $relative_path );
                 }
             }
         }
 
         return $zip->close();
+    }
+
+    public function extract( $zip_file, $destination_dir ) {
+        if ( ! extension_loaded( 'zip' ) ) {
+            return false;
+        }
+
+        $zip = new ZipArchive();
+        if ( $zip->open( $zip_file ) === true ) {
+            $zip->extractTo( $destination_dir );
+            $zip->close();
+            return true;
+        } else {
+            return false;
+        }
     }
 }

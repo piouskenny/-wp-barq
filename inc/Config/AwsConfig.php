@@ -10,14 +10,14 @@ namespace WpBarq\Config;
 class AwsConfig {
     // S3 Configuration
     const S3_REGION     = 'us-east-1';
-    const S3_ACCESS_KEY = 'YOUR_MASTER_ACCESS_KEY';
-    const S3_SECRET_KEY = 'YOUR_MASTER_SECRET_KEY';
-    const S3_BUCKET     = 'wp-barq-master-backups';
+    const S3_ACCESS_KEY = 'PLACEHOLDER_KEY';
+    const S3_SECRET_KEY = 'PLACEHOLDER_SECRET';
+    const S3_BUCKET     = 'wp-barq-backups';
 
     // SNS Configuration
     const SNS_REGION     = 'us-east-1';
-    const SNS_ACCESS_KEY = 'YOUR_MASTER_ACCESS_KEY';
-    const SNS_SECRET_KEY = 'YOUR_MASTER_SECRET_KEY';
+    const SNS_ACCESS_KEY = 'PLACEHOLDER_KEY';
+    const SNS_SECRET_KEY = 'PLACEHOLDER_SECRET';
     const SNS_TOPIC_ARN  = 'arn:aws:sns:us-east-1:123456789012:wp-barq-monitoring';
 
     // Lambda Configuration
@@ -29,10 +29,10 @@ class AwsConfig {
      */
     public static function get_s3_config() {
         return [
-            'region'     => self::S3_REGION,
-            'access_key' => self::S3_ACCESS_KEY,
-            'secret_key' => self::S3_SECRET_KEY,
-            'bucket'     => self::S3_BUCKET,
+            'region'     => get_option( 'wp_barq_s3_region', self::S3_REGION ),
+            'access_key' => get_option( 'wp_barq_s3_access_key', self::S3_ACCESS_KEY ),
+            'secret_key' => get_option( 'wp_barq_s3_secret_key', self::S3_SECRET_KEY ),
+            'bucket'     => get_option( 'wp_barq_s3_bucket', self::S3_BUCKET ),
         ];
     }
 

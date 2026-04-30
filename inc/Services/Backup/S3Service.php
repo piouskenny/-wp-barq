@@ -31,8 +31,13 @@ class S3Service {
             $result = $uploader->upload();
             return $result['ObjectURL'];
         } catch ( MultipartUploadException $e ) {
-            error_log( "WP BARQ S3 Upload Error: " . $e->getMessage() );
-            return false;
+            $error_msg = "S3 Upload Error: " . $e->getMessage();
+            error_log( $error_msg );
+            return new \WP_Error( 's3_upload_error', $error_msg );
+        } catch ( \Exception $e ) {
+            $error_msg = "S3 Error: " . $e->getMessage();
+            error_log( $error_msg );
+            return new \WP_Error( 's3_generic_error', $error_msg );
         }
     }
 
@@ -45,8 +50,22 @@ class S3Service {
             ]);
             return true;
         } catch ( \Exception $e ) {
-            error_log( "WP BARQ S3 Download Error: " . $e->getMessage() );
-            return false;
+            $error_msg = "S3 Download Error: " . $e->getMessage();
+            error_log( $error_msg );
+            return new \WP_Error( 's3_download_error', $error_msg );
+        }
+    }
+
+    public function list_objects( $prefix = '' ) {
+        try {
+            $results = $this->client->listObjectsV2([
+                'Bucket' => $this->bucket,
+                'Prefix' => $prefix,
+            ]);
+            return $results['Contents'] ?? [];
+        } catch ( \Exception $e ) {
+            error_log( "WP BARQ S3 List Error: " . $e->getMessage() );
+            return [];
         }
     }
 }

@@ -34,4 +34,24 @@ class DatabaseDumper {
 
         return file_put_contents( $path, $sql );
     }
+
+    public function import( $path ) {
+        global $wpdb;
+
+        if ( ! file_exists( $path ) ) {
+            return false;
+        }
+
+        $sql = file_get_contents( $path );
+        $queries = explode( ";\n", $sql );
+
+        foreach ( $queries as $query ) {
+            $query = trim( $query );
+            if ( ! empty( $query ) ) {
+                $wpdb->query( $query );
+            }
+        }
+
+        return true;
+    }
 }
