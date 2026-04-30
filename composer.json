@@ -4,7 +4,7 @@
     "type": "wordpress-plugin",
     "require": {
         "php": ">=7.4",
-        "aws/aws-sdk-php": "^3.0"
+        "aws/aws-sdk-php": "^3.379"
     },
     "autoload": {
         "psr-4": {

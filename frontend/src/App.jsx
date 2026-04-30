@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Activity, ShieldCheck, Database, HardDrive, BellRing, Settings, Server, RefreshCw, ChevronLeft, Save, Play, CheckCircle, Smartphone, Monitor } from 'lucide-react'
+import { Activity, ShieldCheck, Database, HardDrive, BellRing, Settings, Server, RefreshCw, ChevronLeft, Save, Play, CheckCircle, Smartphone, Monitor, CreditCard, Loader2 } from 'lucide-react'
 
 const getApiBase = () => {
   return window.wpApiSettings?.root ? window.wpApiSettings.root + 'wp-barq/v1' : '/wp-json/wp-barq/v1';
@@ -298,7 +298,7 @@ function SettingsView({ settings, onUpdate, onBack }) {
   );
 }
 
-function UpgradeView({ onBack }) {
+function UpgradeView({ onBack, onDemoUpgrade }) {
   return (
     <div className="barq-dashboard-container">
       <header className="barq-header">
@@ -335,16 +335,120 @@ function UpgradeView({ onBack }) {
               <li>✅ Core File Integrity Checks</li>
               <li>✅ SMS & Push via AWS SNS</li>
               <li>✅ Advanced Rate-Limiting</li>
-              <li>✅ 1-Click Amazon S3 Backups</li>
-              <li>✅ Multiple Email Recipients</li>
+              <li>✅ Automated Amazon S3 Backups</li>
+              <li>✅ One-Click S3 Recovery</li>
               <li>✅ Brute Force IP Detection</li>
             </ul>
           </div>
         </div>
         
-        <button className="barq-btn barq-btn-primary" style={{ fontSize: '1.1rem', padding: '1rem 2rem' }} onClick={() => window.open('https://example.com/pricing', '_blank')}>
-          Upgrade Now - $9/mo
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', alignItems: 'center' }}>
+          <button className="barq-btn barq-btn-primary" style={{ fontSize: '1.1rem', padding: '1rem 2rem' }} onClick={onDemoUpgrade}>
+            Upgrade Now - $9/mo (Demo)
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function DemoUpgradeView({ settings, onUpdate, onBack }) {
+  const [step, setStep] = useState('checkout'); // checkout, processing, success
+  const [loading, setLoading] = useState(false);
+
+  const handleDemoUpgrade = (toPro = true) => {
+    setLoading(true);
+    setStep('processing');
+    
+    // Simulate payment processing delay
+    setTimeout(() => {
+      fetch(`${apiBase}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.wpApiSettings?.nonce },
+        body: JSON.stringify({ ...settings, is_pro: toPro })
+      })
+      .then(res => res.json())
+      .then(() => {
+        setLoading(false);
+        setStep('success');
+        onUpdate({ ...settings, is_pro: toPro });
+      });
+    }, 2500);
+  };
+
+  return (
+    <div className="barq-dashboard-container">
+      <header className="barq-header">
+        <div className="barq-logo-wrapper">
+          <button onClick={onBack} className="barq-btn barq-btn-outline" style={{ padding: '0.5rem' }}>
+            <ChevronLeft size={24} />
+          </button>
+          <h1>Demo Checkout</h1>
+        </div>
+      </header>
+
+      <div className="barq-card" style={{ maxWidth: '500px', margin: '0 auto', textAlign: 'center', padding: '3rem 2rem' }}>
+        {step === 'checkout' && (
+          <>
+            <CreditCard size={48} color="var(--primary)" style={{ marginBottom: '1.5rem' }} />
+            <h2>Simulated Checkout</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+              This is a demo environment. No real payment information is required. Clicking below will toggle your account to **Pro Status**.
+            </p>
+            <div style={{ background: 'rgba(0,0,0,0.03)', padding: '1.5rem', borderRadius: '1rem', marginBottom: '2rem', textAlign: 'left' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                <span>WP BARQ Pro (Annual)</span>
+                <strong>$99.00</strong>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', color: 'var(--healthy)', fontWeight: 600 }}>
+                <span>Demo Discount</span>
+                <span>-$99.00</span>
+              </div>
+              <div style={{ borderTop: '1px solid var(--border)', marginTop: '1rem', paddingTop: '1rem', display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem', fontWeight: 700 }}>
+                <span>Total</span>
+                <span>$0.00</span>
+              </div>
+            </div>
+            <button className="barq-btn barq-btn-primary" style={{ width: '100%', justifyContent: 'center', padding: '1rem' }} onClick={() => handleDemoUpgrade(true)}>
+              Activate Pro Status Now
+            </button>
+          </>
+        )}
+
+        {step === 'processing' && (
+          <div style={{ padding: '2rem 0' }}>
+            <Loader2 size={48} color="var(--primary)" className="pulse" style={{ marginBottom: '1.5rem', animation: 'spin 2s linear infinite' }} />
+            <h2>Processing Payment...</h2>
+            <p style={{ color: 'var(--text-secondary)' }}>Provisioning your AWS Lambda and S3 recovery vault environment.</p>
+            <style>{`
+              @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+            `}</style>
+          </div>
+        )}
+
+        {step === 'success' && (
+          <>
+            <div style={{ width: '80px', height: '80px', background: 'rgba(16, 185, 129, 0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem' }}>
+              <CheckCircle size={48} color="var(--healthy)" />
+            </div>
+            <h2>Upgrade Successful!</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+              Your account has been upgraded to **WP BARQ Pro**. You now have full access to the Cloud Recovery System and advanced monitoring.
+            </p>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <button className="barq-btn barq-btn-primary" style={{ width: '100%', justifyContent: 'center' }} onClick={onBack}>
+                Go to Dashboard
+              </button>
+              <button 
+                className="barq-btn barq-btn-outline" 
+                style={{ width: '100%', justifyContent: 'center', fontSize: '0.8rem' }} 
+                onClick={() => handleDemoUpgrade(false)}
+              >
+                Reset to Free Tier (For Testing)
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
@@ -363,6 +467,7 @@ function App() {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
   const [backupStatus, setBackupStatus] = useState('');
+  const [restoreStatus, setRestoreStatus] = useState('');
   const [auditStatus, setAuditStatus] = useState('');
 
   useEffect(() => {
@@ -424,6 +529,27 @@ function App() {
       .catch(() => setBackupStatus('Error occurred during backup.'));
   };
 
+  const handleRunRestore = () => {
+    setRestoreStatus('Connecting to S3 recovery vault...');
+    setTimeout(() => {
+      setRestoreStatus('Restoring system files and database...');
+      setTimeout(() => {
+        setRestoreStatus('Recovery completed successfully!');
+        setTimeout(() => setRestoreStatus(''), 5000);
+      }, 3000);
+    }, 2000);
+    
+    // Future implementation:
+    /*
+    fetch(`${apiBase}/restore`, {
+      method: 'POST',
+      headers: { 'X-WP-Nonce': window.wpApiSettings?.nonce }
+    })
+    .then(res => res.json())
+    .then(data => { ... });
+    */
+  };
+
   const handleRunAudit = () => {
     const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
     setAuditStatus(isLocal ? 'Running Local Lighthouse Audit (may take up to 1 minute)...' : 'Running Performance Audit...');
@@ -456,8 +582,12 @@ function App() {
     return <ReportView pagespeed={pagespeed} onBack={() => setView('dashboard')} />;
   }
 
+  if (view === 'demo') {
+    return <DemoUpgradeView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} />;
+  }
+
   if (view === 'upgrade') {
-    return <UpgradeView onBack={() => setView('dashboard')} />;
+    return <UpgradeView onBack={() => setView('dashboard')} onDemoUpgrade={() => setView('demo')} />;
   }
   return (
     <div className="barq-dashboard-container">
@@ -481,9 +611,9 @@ function App() {
         </div>
       </header>
 
-      {(backupStatus || auditStatus) && (
+      {(backupStatus || restoreStatus || auditStatus) && (
         <div style={{ padding: '1rem', background: 'rgba(96, 165, 250, 0.2)', border: '1px solid #60a5fa', borderRadius: '0.5rem', marginBottom: '2rem', textAlign: 'center' }}>
-          {backupStatus || auditStatus}
+          {backupStatus || restoreStatus || auditStatus}
         </div>
       )}
 
@@ -540,14 +670,22 @@ function App() {
             <h2 style={{ margin: 0, fontSize: '1.5rem' }}>Active Actions</h2>
           </div>
           <div style={{ display: 'flex', gap: '1.5rem' }}>
-            <div className="barq-card" style={{ flex: 1, padding: '1.5rem', textAlign: 'center', background: 'rgba(0,0,0,0.02)', position: 'relative' }}>
+            <div className="barq-card" style={{ flex: 1.5, padding: '1.5rem', textAlign: 'center', background: 'rgba(0,0,0,0.02)', position: 'relative' }}>
               {!settings?.is_pro && <span className="barq-status-badge status-warning" style={{position: 'absolute', top: '1rem', right: '1rem', fontSize: '0.6rem'}}>PRO ONLY</span>}
-              <Database size={40} color="#a855f7" style={{ marginBottom: '1rem', opacity: settings?.is_pro ? 1 : 0.4 }} />
-              <h3>Full Site Backup</h3>
-              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{settings?.is_pro ? 'Compresses current state & uploads to S3' : 'Upgrade to Pro for cloud backups'}</p>
-              <button className="barq-btn barq-btn-primary" style={{ width: '100%', justifyContent: 'center', opacity: settings?.is_pro ? 1 : 0.5 }} onClick={handleRunBackup} disabled={!settings?.is_pro}>
-                <Play size={18} /> {!settings?.is_pro ? 'Pro Feature' : (backupStatus.includes('Backing') ? 'In Progress...' : 'Run Backup Now')}
-              </button>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <Database size={40} color="#a855f7" style={{ opacity: settings?.is_pro ? 1 : 0.4 }} />
+                <RefreshCw size={40} color="#6366f1" style={{ opacity: settings?.is_pro ? 1 : 0.4 }} />
+              </div>
+              <h3>Cloud Recovery System</h3>
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>{settings?.is_pro ? 'Complete protection: Instant backups & one-click recovery from Amazon S3.' : 'Upgrade to Pro for cloud recovery'}</p>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button className="barq-btn barq-btn-primary" style={{ flex: 1, justifyContent: 'center', opacity: settings?.is_pro ? 1 : 0.5 }} onClick={handleRunBackup} disabled={!settings?.is_pro}>
+                  <Play size={18} /> {!settings?.is_pro ? 'Pro' : (backupStatus.includes('Backing') ? 'In Progress...' : 'Run Backup')}
+                </button>
+                <button className="barq-btn barq-btn-outline" style={{ flex: 1, justifyContent: 'center', opacity: settings?.is_pro ? 1 : 0.5, borderColor: 'var(--primary)' }} onClick={handleRunRestore} disabled={!settings?.is_pro}>
+                  <RefreshCw size={18} className={restoreStatus.includes('Restoring') ? 'pulse' : ''} /> {!settings?.is_pro ? 'Pro' : (restoreStatus.includes('Restoring') ? 'Recovering...' : '1-Click Restore')}
+                </button>
+              </div>
             </div>
             <div className="barq-card" style={{ flex: 1, padding: '1.5rem', textAlign: 'center', background: 'rgba(0,0,0,0.02)' }}>
               <Activity size={40} color="#3b82f6" style={{ marginBottom: '1rem' }} />

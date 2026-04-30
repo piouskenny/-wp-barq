@@ -4,7 +4,7 @@
  * Plugin URI: https://example.com/wp-barq
  * Description: A robust WordPress monitoring and backup system integrated with AWS.
  * Version: 1.0.0
- * Author: Development Team
+ * Author: Adekunle Kehinde (Piouskenny)
  * Author URI: https://example.com
  * Text Domain: wp-barq
  */

@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
         'name' => 'wp_barq/wp_barq',
-        'pretty_version' => '1.0.0+no-version-set',
-        'version' => '1.0.0.0',
-        'reference' => null,
+        'pretty_version' => 'dev-main',
+        'version' => 'dev-main',
+        'reference' => '3973653d39e854f11d8fabac06b74b0cd3a0a73c',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -20,9 +20,9 @@
             'dev_requirement' => false,
         ),
         'aws/aws-sdk-php' => array(
-            'pretty_version' => '3.376.0',
-            'version' => '3.376.0.0',
-            'reference' => '5c9ce14723532cd694fa64dc1cbd1b33db1c79f9',
+            'pretty_version' => '3.379.9',
+            'version' => '3.379.9.0',
+            'reference' => 'aaa9aab5d077018dbc9af63338b2c5aa44a5add3',
             'type' => 'library',
             'install_path' => __DIR__ . '/../aws/aws-sdk-php',
             'aliases' => array(),
@@ -155,9 +155,9 @@
             'dev_requirement' => false,
         ),
         'wp_barq/wp_barq' => array(
-            'pretty_version' => '1.0.0+no-version-set',
-            'version' => '1.0.0.0',
-            'reference' => null,
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => '3973653d39e854f11d8fabac06b74b0cd3a0a73c',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
