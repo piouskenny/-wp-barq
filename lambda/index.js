@@ -17,10 +17,13 @@ const RATE_LIMIT_TABLE = process.env.DYNAMODB_TABLE_NAME || 'WpBarqRateLimits';
 // Max events per type per hour
 const RATE_LIMITS = {
     'php_fatal': 10,
+    'fault_surge': 3,
+    'health_critical': 5,
     'security_login_fail': 20,
     'security_brute_force': 5,
     'security_file_change': 3
 };
+
 
 export const handler = async (event) => {
     try {

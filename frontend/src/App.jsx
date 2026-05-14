@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Activity, ShieldCheck, Database, HardDrive, BellRing, Settings, Server, RefreshCw, ChevronLeft, Save, Play, CheckCircle, Smartphone, Monitor, CreditCard, Loader2, X, AlertTriangle, LayoutDashboard, Zap, ShieldAlert, History } from 'lucide-react'
+import { Activity, ShieldCheck, Database, HardDrive, BellRing, Settings, Server, RefreshCw, ChevronLeft, ChevronRight, Save, Play, CheckCircle, Smartphone, Monitor, CreditCard, Loader2, X, AlertTriangle, LayoutDashboard, Zap, ShieldAlert, History } from 'lucide-react'
 
 const getApiBase = () => {
   return window.wpApiSettings?.root ? window.wpApiSettings.root + 'wp-barq/v1' : '/wp-json/wp-barq/v1';
@@ -590,7 +590,7 @@ function DemoUpgradeView({ settings, onUpdate, onBack, selectedPlan }) {
 }
 
 
-function Sidebar({ activeView, setView, plan }) {
+function Sidebar({ activeView, setView, plan, isCollapsed, onToggle }) {
   const menuItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
     { id: 'recovery', label: 'Cloud Recovery', icon: RefreshCw, badge: plan !== 'free' ? 'Pro+' : null },
@@ -600,10 +600,15 @@ function Sidebar({ activeView, setView, plan }) {
   ];
 
   return (
-    <aside className="barq-sidebar">
-      <div className="barq-logo-wrapper" style={{ padding: '0 1rem', marginBottom: '1rem' }}>
+    <aside className={`barq-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
+      <button className="barq-collapse-btn" onClick={onToggle}>
+        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+      </button>
+
+
+      <div className="barq-logo-wrapper">
         <Activity size={32} color="var(--primary)" />
-        <h1 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 800, background: 'linear-gradient(135deg, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>WP BARQ</h1>
+        {!isCollapsed && <h1 style={{ fontSize: '1.5rem', margin: 0, fontWeight: 800, background: 'linear-gradient(135deg, var(--primary), var(--secondary))', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>WP BARQ</h1>}
       </div>
       
       <nav style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -612,24 +617,27 @@ function Sidebar({ activeView, setView, plan }) {
             key={item.id} 
             className={`barq-nav-item ${activeView === item.id ? 'active' : ''}`}
             onClick={() => setView(item.id)}
+            title={isCollapsed ? item.label : ''}
           >
             <item.icon size={20} />
-            <span className="barq-nav-label">{item.label}</span>
-            {item.badge && <span className="barq-badge">{item.badge}</span>}
+            {!isCollapsed && <span className="barq-nav-label">{item.label}</span>}
+            {!isCollapsed && item.badge && <span className="barq-badge">{item.badge}</span>}
           </button>
         ))}
       </nav>
 
-      <div style={{ marginTop: 'auto' }}>
-        <div className="barq-card" style={{ padding: '1.25rem', background: 'rgba(99, 102, 241, 0.05)', textAlign: 'center' }}>
-          <p style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Plan: <strong style={{color: 'var(--primary)', textTransform: 'uppercase'}}>{plan}</strong></p>
-          {plan === 'free' && (
-            <button className="barq-btn barq-btn-primary" style={{ width: '100%', fontSize: '0.8rem', padding: '0.5rem' }} onClick={() => setView('upgrade')}>
-              Upgrade
-            </button>
-          )}
+      {!isCollapsed && (
+        <div className="barq-sidebar-footer" style={{ marginTop: 'auto' }}>
+          <div className="barq-card" style={{ padding: '1.25rem', background: 'rgba(99, 102, 241, 0.05)', textAlign: 'center' }}>
+            <p style={{ margin: '0 0 1rem 0', fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Plan: <strong style={{color: 'var(--primary)', textTransform: 'uppercase'}}>{plan}</strong></p>
+            {plan === 'free' && (
+              <button className="barq-btn barq-btn-primary" style={{ width: '100%', fontSize: '0.8rem', padding: '0.5rem' }} onClick={() => setView('upgrade')}>
+                Upgrade
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </aside>
   );
 }
@@ -791,6 +799,7 @@ function App() {
   const [restoreStatus, setRestoreStatus] = useState('');
   const [auditStatus, setAuditStatus] = useState('');
   const [selectedPlan, setSelectedPlan] = useState(null);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [modal, setModal] = useState({ isOpen: false, title: '', status: '', steps: [], currentStep: 0, error: '' });
 
   useEffect(() => {
@@ -922,12 +931,15 @@ function App() {
   if (!settings) return <div style={{ padding: '4rem', textAlign: 'center' }}><Loader2 size={40} className="spin" color="var(--primary)" /></div>;
 
   const renderContent = () => {
-    if (view === 'upgrade') return <UpgradeView onBack={() => setView('dashboard')} onDemoUpgrade={(plan) => { setSelectedPlan(plan); setView('demo'); }} />;
-    if (view === 'demo') return <DemoUpgradeView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} selectedPlan={selectedPlan} />;
-    
     return (
       <div className="barq-dashboard-layout">
-        <Sidebar activeView={view} setView={setView} plan={settings?.plan || 'free'} />
+        <Sidebar 
+          activeView={view} 
+          setView={setView} 
+          plan={settings?.plan || 'free'} 
+          isCollapsed={isSidebarCollapsed}
+          onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {view === 'dashboard' && <OverviewPage health={health} pagespeed={pagespeed} onSync={fetchHealth} loading={loading} setView={setView} />}
           {view === 'recovery' && <RecoveryPage settings={settings} onBackup={handleRunBackup} onRestore={handleRunRestore} backupStatus={backupStatus} restoreStatus={restoreStatus} />}
@@ -935,6 +947,8 @@ function App() {
           {view === 'settings' && <SettingsView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} />}
           {view === 'notifications' && <NotificationsView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} />}
           {view === 'report' && <ReportView pagespeed={pagespeed} onBack={() => setView('dashboard')} />}
+          {view === 'upgrade' && <UpgradeView onBack={() => setView('dashboard')} onDemoUpgrade={(plan) => { setSelectedPlan(plan); setView('demo'); }} />}
+          {view === 'demo' && <DemoUpgradeView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} selectedPlan={selectedPlan} />}
         </div>
       </div>
     );

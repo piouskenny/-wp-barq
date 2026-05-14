@@ -64,7 +64,9 @@ class Plugin {
         }
 
         
-        // Trigger notifications on critical faults
+        // --- ALERTS & NOTIFICATIONS ---
+
+        // 1. Critical PHP Faults
         add_action( 'wp_barq_critical_fault', function( $error ) use ( $notification_service, $lambda_service ) {
             $notification_service->notify( 
                 'WP BARQ: Critical Fault Detected', 
@@ -72,7 +74,6 @@ class Plugin {
                 'faults'
             );
 
-            // Dispatch to Lambda
             $lambda_service->dispatch(
                 'php_fatal',
                 'CRITICAL',
@@ -81,7 +82,28 @@ class Plugin {
             );
         });
 
-        // Trigger notifications on backup failures
+        // 2. Fault Surges (Instability)
+        add_action( 'wp_barq_fault_surge', function( $count ) use ( $notification_service, $lambda_service ) {
+            $message = "Your site has experienced {$count} critical faults in the last 5 minutes. This indicates significant instability.";
+            
+            $notification_service->notify( 'WP BARQ: Fault Surge Detected (Instability)', $message, 'faults' );
+
+            $lambda_service->dispatch( 'fault_surge', 'CRITICAL', $message, ['fault_count' => $count] );
+        });
+
+        // 3. Health & Downtime
+        add_action( 'wp_barq_health_critical', function( $data ) use ( $notification_service, $lambda_service ) {
+            // notification_service->notify is already called inside HealthMonitor for specific emails,
+            // but we use this hook to ensure Lambda is always notified of critical health issues.
+            $lambda_service->dispatch(
+                'health_critical',
+                'CRITICAL',
+                $data['message'],
+                ['health_type' => $data['type'], 'context' => $data['context']]
+            );
+        });
+
+        // 4. Backup Failures
         add_action( 'wp_barq_backup_failed', function( $error_message ) use ( $notification_service ) {
             $notification_service->notify( 
                 'WP BARQ: Backup Failed', 
@@ -89,6 +111,7 @@ class Plugin {
                 'backups'
             );
         });
+
 
         $this->service_manager->init_services();
     }

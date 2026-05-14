@@ -80,6 +80,8 @@ class FaultDetector {
         file_put_contents( $this->log_file, $log_entry, FILE_APPEND );
         
         if ( $severity === 'CRITICAL' ) {
+            $this->detect_fault_surge();
+            
             do_action( 'wp_barq_critical_fault', [
                 'message' => $message,
                 'file'    => $file,
@@ -87,6 +89,32 @@ class FaultDetector {
             ] );
         }
     }
+
+    /**
+     * Detect if an unusual number of critical faults are happening.
+     * This is an early indicator of site instability or a broken update.
+     */
+    private function detect_fault_surge() {
+        $transient_key = 'wp_barq_fault_surge_count';
+        $surge_threshold = 5; // 5 critical faults in 5 minutes
+        $window = 5 * MINUTE_IN_SECONDS;
+
+        $count = get_transient( $transient_key ) ?: 0;
+        $count++;
+
+        if ( $count >= $surge_threshold ) {
+            // Check if we already notified recently to avoid spamming the surge alert
+            if ( ! get_transient( 'wp_barq_fault_surge_notified' ) ) {
+                do_action( 'wp_barq_fault_surge', $count );
+                set_transient( 'wp_barq_fault_surge_notified', true, 15 * MINUTE_IN_SECONDS );
+            }
+            // Reset count after surge triggered
+            delete_transient( $transient_key );
+        } else {
+            set_transient( $transient_key, $count, $window );
+        }
+    }
+
 
     private function get_severity_string( $errno ) {
         switch ( $errno ) {

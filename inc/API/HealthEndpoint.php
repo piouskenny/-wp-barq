@@ -40,6 +40,13 @@ class HealthEndpoint {
 
     public function get_health_report( $request ) {
         $report = $this->health_monitor->generate_report();
-        return rest_ensure_response( $report );
+        $response = rest_ensure_response( $report );
+
+        if ( $report['status'] === 'critical' ) {
+            $response->set_status( 503 );
+        }
+
+        return $response;
     }
+
 }
