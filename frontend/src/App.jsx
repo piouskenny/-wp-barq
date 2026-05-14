@@ -823,9 +823,12 @@ function App() {
         'X-WP-Nonce': window.wpApiSettings?.nonce 
       } 
     })
-      .then(res => {
-        if (!res.ok) throw new Error('Failed to fetch health data');
-        return res.json();
+      .then(async res => {
+        const data = await res.json();
+        if (!res.ok && res.status !== 503) {
+           throw new Error(data.message || 'Failed to fetch health data');
+        }
+        return data;
       })
       .then(data => { 
         setHealth(data); 
