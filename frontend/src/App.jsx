@@ -601,7 +601,7 @@ function Sidebar({ activeView, setView, plan, isCollapsed, onToggle }) {
 
   return (
     <aside className={`barq-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
-      <button className="barq-collapse-btn" onClick={onToggle}>
+      <button type="button" className="barq-collapse-btn" onClick={() => { console.log('Sidebar toggle clicked'); onToggle(); }}>
         {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
       </button>
 
@@ -615,6 +615,7 @@ function Sidebar({ activeView, setView, plan, isCollapsed, onToggle }) {
         {menuItems.map(item => (
           <button 
             key={item.id} 
+            type="button"
             className={`barq-nav-item ${activeView === item.id ? 'active' : ''}`}
             onClick={() => setView(item.id)}
             title={isCollapsed ? item.label : ''}
