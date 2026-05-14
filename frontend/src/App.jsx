@@ -602,7 +602,7 @@ function Sidebar({ activeView, setView, plan, isCollapsed, onToggle }) {
   return (
     <aside className={`barq-sidebar ${isCollapsed ? 'collapsed' : ''}`}>
       <button type="button" className="barq-collapse-btn" onClick={() => { console.log('Sidebar toggle clicked'); onToggle(); }}>
-        {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+        {isCollapsed ? <ChevronRight size={18} /> : <ChevronLeft size={18} />}
       </button>
 
 
