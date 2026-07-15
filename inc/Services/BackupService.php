@@ -19,10 +19,27 @@ class BackupService {
     }
 
     public function init() {
-        // Here we could schedule automatic backups.
+        // Schedule daily automatic backups if the plan supports it
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'premium_30k' || $plan === 'pro' || $plan === 'pro_plus' || $plan === 'agency' ) {
+            if ( ! wp_next_scheduled( 'wp_barq_automatic_backup' ) ) {
+                wp_schedule_event( time(), 'daily', 'wp_barq_automatic_backup' );
+            }
+        } else {
+            $timestamp = wp_next_scheduled( 'wp_barq_automatic_backup' );
+            if ( $timestamp ) {
+                wp_unschedule_event( $timestamp, 'wp_barq_automatic_backup' );
+            }
+        }
+        add_action( 'wp_barq_automatic_backup', [ $this, 'run_backup' ] );
     }
 
     public function run_backup() {
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'free' ) {
+            return new \WP_Error( 'plan_restriction', 'Backups are not included in the Free plan.' );
+        }
+
         // Increase limits for heavy backup process
         @set_time_limit( 0 );
         @ini_set( 'memory_limit', '512M' );
@@ -77,10 +94,11 @@ class BackupService {
 
         // Step 3: Upload to S3 if Pro
         if ( ! $this->is_pro ) {
+            update_option( 'wp_barq_last_backup_time', time() );
             return [
                 'success' => true,
-                'file'    => $zip_file,
-                'message' => 'Local backup created. Upgrade to Pro for S3 cloud storage.'
+                'file'    => basename( $zip_file ),
+                'message' => 'Local backup created successfully.'
             ];
         }
 
@@ -107,20 +125,24 @@ class BackupService {
     private function get_plan_cooldown() {
         $plan = get_option( 'wp_barq_plan', 'free' );
         switch ( $plan ) {
-            case 'agency':   return 3600;      // 1 hour
-            case 'pro_plus': return 21600;     // 6 hours
-            case 'pro':      return 86400;     // 24 hours
-            default:         return 604800;    // 7 days (Free)
+            case 'agency':      return 3600;      // 1 hour
+            case 'pro_plus':    return 21600;     // 6 hours
+            case 'pro':         return 3600;      // 1 hour
+            case 'premium_30k': return 3600;      // 1 hour
+            case 'freemium':    return 86400;     // 24 hours
+            default:            return 604800;    // 7 days (Free)
         }
     }
 
     private function get_plan_max_size() {
         $plan = get_option( 'wp_barq_plan', 'free' );
         switch ( $plan ) {
-            case 'agency':   return 5 * 1024 * 1024 * 1024; // 5GB
-            case 'pro_plus': return 2 * 1024 * 1024 * 1024; // 2GB
-            case 'pro':      return 500 * 1024 * 1024;      // 500MB
-            default:         return 100 * 1024 * 1024;      // 100MB (Free)
+            case 'agency':      return 5 * 1024 * 1024 * 1024; // 5GB
+            case 'pro_plus':    return 2 * 1024 * 1024 * 1024; // 2GB
+            case 'pro':         return 5 * 1024 * 1024 * 1024; // 5GB
+            case 'premium_30k': return 5 * 1024 * 1024 * 1024; // 5GB
+            case 'freemium':    return 500 * 1024 * 1024;      // 500MB
+            default:            return 0;                      // 0
         }
     }
 
@@ -148,7 +170,27 @@ class BackupService {
 
     public function list_backups() {
         if ( ! $this->is_pro ) {
-            return [];
+            $upload_dir = wp_upload_dir();
+            $backup_dir = trailingslashit( $upload_dir['basedir'] ) . 'wp-barq-backups';
+            if ( ! file_exists( $backup_dir ) ) {
+                return [];
+            }
+            $files = glob( $backup_dir . '/backup-*.zip' );
+            if ( ! $files ) {
+                return [];
+            }
+            $backups = [];
+            foreach ( $files as $file ) {
+                $backups[] = [
+                    'key'  => basename( $file ),
+                    'size' => filesize( $file ),
+                    'date' => date( 'Y-m-d H:i:s', filemtime( $file ) ),
+                ];
+            }
+            usort( $backups, function( $a, $b ) {
+                return strcmp( $b['date'], $a['date'] );
+            } );
+            return $backups;
         }
 
         $config = AwsConfig::get_s3_config();
@@ -174,8 +216,36 @@ class BackupService {
     }
 
     public function run_restore( $backup_key ) {
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'free' ) {
+            return new \WP_Error( 'plan_restriction', 'Restore feature requires a subscription.' );
+        }
+
         if ( ! $this->is_pro ) {
-            return new \WP_Error( 'pro_required', 'Restore feature requires Pro.' );
+            $upload_dir = wp_upload_dir();
+            $backup_dir = trailingslashit( $upload_dir['basedir'] ) . 'wp-barq-backups';
+            $zip_file = $backup_dir . '/' . basename( $backup_key );
+
+            if ( ! file_exists( $zip_file ) ) {
+                return new \WP_Error( 'restore_failed', 'Backup file not found locally.' );
+            }
+
+            if ( ! $this->archiver->extract( $zip_file, ABSPATH ) ) {
+                return new \WP_Error( 'extraction_failed', 'Failed to extract backup.' );
+            }
+
+            $files = glob( ABSPATH . '/*.sql' );
+            foreach ( $files as $file ) {
+                if ( strpos( basename($file), 'db-' ) === 0 ) {
+                    $this->dumper->import( $file );
+                    @unlink( $file );
+                }
+            }
+
+            return [
+                'success' => true,
+                'message' => 'Site restored successfully from local backup.'
+            ];
         }
 
         $upload_dir = wp_upload_dir();
@@ -187,7 +257,6 @@ class BackupService {
 
         $zip_file = $temp_dir . '/restore.zip';
 
-        // 1. Download from S3
         $config = AwsConfig::get_s3_config();
         $this->s3_service = new S3Service( 
             $config['region'], 
@@ -201,13 +270,10 @@ class BackupService {
             return $result;
         }
 
-        // 2. Extract
         if ( ! $this->archiver->extract( $zip_file, ABSPATH ) ) {
             return new \WP_Error( 'extraction_failed', 'Failed to extract backup.' );
         }
 
-        // 3. Import DB if found
-        // Look for .sql files in the extracted content
         $files = glob( ABSPATH . '/*.sql' );
         foreach ( $files as $file ) {
             if ( strpos( basename($file), 'db-' ) === 0 ) {
@@ -216,7 +282,6 @@ class BackupService {
             }
         }
 
-        // Cleanup
         @unlink( $zip_file );
 
         return [

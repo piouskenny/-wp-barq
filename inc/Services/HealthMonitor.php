@@ -23,6 +23,10 @@ class HealthMonitor {
      * Run periodic checks for storage and other health metrics.
      */
     public function run_periodic_checks() {
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'free' ) {
+            return;
+        }
         $this->check_storage_threshold();
         $this->check_database_threshold();
     }
@@ -97,6 +101,17 @@ class HealthMonitor {
     }
 
     public function generate_report() {
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'free' ) {
+            return [
+                'timestamp' => current_time('mysql', 1),
+                'status'    => 'healthy',
+                'metrics'   => [
+                    'disk_usage' => $this->check_disk_usage(),
+                ]
+            ];
+        }
+
         $report = [
             'timestamp' => current_time('mysql', 1),
             'status'    => 'healthy',

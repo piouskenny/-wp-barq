@@ -19,6 +19,11 @@ class FaultDetector {
     }
 
     public function init() {
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan !== 'premium_30k' && $plan !== 'pro' && $plan !== 'pro_plus' && $plan !== 'agency' ) {
+            return;
+        }
+
         $this->is_debug_mode_active = get_option( 'wp_barq_debug_mode', false );
 
         // If debug mode is active, ensure we check its expiration.

@@ -7,11 +7,32 @@ const getApiBase = () => {
 
 const apiBase = getApiBase();
 
-function StatusCard({ title, value, status, icon: Icon, time, action }) {
+function StatusCard({ title, value, status, icon: Icon, time, action, locked, onUnlock }) {
   const isHealthy = status === 'healthy'
   
   return (
-    <div className="barq-card">
+    <div className="barq-card" style={{ position: 'relative', overflow: 'hidden' }}>
+      {locked && (
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'rgba(255, 255, 255, 0.85)',
+          backdropFilter: 'blur(3px)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 10,
+          padding: '1rem',
+          textAlign: 'center',
+          gap: '0.5rem'
+        }}>
+          <ShieldAlert size={24} color="var(--primary)" />
+          <span style={{ fontWeight: 600, fontSize: '0.85rem', color: 'var(--text-main)' }}>Automatic Check Locked</span>
+          <button className="barq-btn barq-btn-primary" style={{ padding: '0.25rem 0.5rem', fontSize: '0.75rem' }} onClick={onUnlock}>Upgrade</button>
+        </div>
+      )}
+      
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
         <h3 style={{ margin: 0, fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.025em' }}>{title}</h3>
         <span className={`barq-status-badge ${status === 'healthy' ? 'status-healthy' : (status === 'warning' ? 'status-warning' : 'status-critical')} ${isHealthy ? 'pulse' : ''}`}>
@@ -409,35 +430,45 @@ function ProgressModal({ isOpen, title, status, steps, currentStep, onClose, err
 function UpgradeView({ onBack, onDemoUpgrade }) {
   const plans = [
     {
-      id: 'pro',
-      name: 'Pro Plan',
-      price: '$15',
-      period: '/mo',
-      color: 'var(--primary)',
-      icon: ShieldCheck,
-      features: ['Automated QA checks', 'Site Monitoring', 'Real-time Alerts', 'Basic local backup'],
-      note: 'Perfect for single sites'
+      id: 'free',
+      name: 'Free Plan',
+      price: 'Free',
+      period: '',
+      color: '#6b7280',
+      icon: Server,
+      features: ['Disk Storage View Only', 'No Backups Included', 'No Automatic Detection', 'No Real-time Alerts'],
+      note: 'Simple storage check'
     },
     {
-      id: 'pro_plus',
-      name: 'Pro+ AWS',
-      price: '$39',
-      period: '/mo',
+      id: 'freemium',
+      name: 'Freemium Plan',
+      price: 'Free',
+      period: ' (Freemium)',
       color: 'var(--secondary)',
+      icon: Database,
+      features: ['Local Manual Backups', 'Disk Storage View', 'No Automated Backups', 'No AWS integration'],
+      note: 'Basic local protection'
+    },
+    {
+      id: 'premium_30k',
+      name: 'Premium 30k',
+      price: '₦30k',
+      period: '/mo',
+      color: 'var(--primary)',
       icon: Activity,
-      features: ['One-Click S3 Recovery', 'Automated S3 Backups', 'SNS Instant Alerts', 'Security Detection'],
-      note: 'Full Cloud Power',
+      features: ['Manual Backups up to 5 GB', 'Automatic Daily Backups', 'Automatic Fault Detection', 'No AWS Cloud backup'],
+      note: 'For professional websites',
       popular: true
     },
     {
-      id: 'agency',
-      name: 'Agency Plan',
-      price: '$99',
+      id: 'pro',
+      name: 'Pro Cloud AWS',
+      price: '$15',
       period: '/mo',
-      color: '#1e293b',
-      icon: Database,
-      features: ['Up to 10 Sites', 'Priority AWS Support', 'White-label Reports', 'Multi-site Dashboard'],
-      note: 'Best for scale'
+      color: '#10b981',
+      icon: ShieldCheck,
+      features: ['Offsite Amazon S3 Backups', '1-Click S3 Recovery', 'Amazon SNS Alerts', 'Lambda Security Monitoring'],
+      note: 'Full AWS cloud power'
     }
   ];
 
@@ -452,7 +483,7 @@ function UpgradeView({ onBack, onDemoUpgrade }) {
         </div>
       </header>
       
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '2rem', marginBottom: '4rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '2rem', marginBottom: '4rem' }}>
         {plans.map((plan) => (
           <div key={plan.id} className="barq-card" style={{ display: 'flex', flexDirection: 'column', padding: '2.5rem', border: plan.popular ? `2px solid ${plan.color}` : '1px solid var(--glass-border)', position: 'relative' }}>
             {plan.popular && <span style={{ position: 'absolute', top: 0, right: '2rem', background: plan.color, color: 'white', padding: '0.25rem 1rem', borderRadius: '0 0 1rem 1rem', fontSize: '0.8rem', fontWeight: 700 }}>MOST POPULAR</span>}
@@ -463,8 +494,8 @@ function UpgradeView({ onBack, onDemoUpgrade }) {
             </div>
             
             <div style={{ marginBottom: '2.5rem' }}>
-              <span style={{ fontSize: '3rem', fontWeight: 800 }}>{plan.price}</span>
-              <span style={{ color: 'var(--text-secondary)', fontSize: '1.25rem' }}>{plan.period}</span>
+              <span style={{ fontSize: '2.75rem', fontWeight: 800 }}>{plan.price}</span>
+              <span style={{ color: 'var(--text-secondary)', fontSize: '1.1rem' }}>{plan.period}</span>
             </div>
             
             <ul style={{ listStyle: 'none', padding: 0, margin: '0 0 3rem 0', flex: 1, display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -503,17 +534,19 @@ function DemoUpgradeView({ settings, onUpdate, onBack, selectedPlan }) {
     setLoading(true);
     setStep('processing');
     
+    const isProPlan = toPlan === 'pro' || toPlan === 'pro_plus' || toPlan === 'agency';
+    
     setTimeout(() => {
       fetch(`${apiBase}/settings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.wpApiSettings?.nonce },
-        body: JSON.stringify({ ...settings, is_pro: toPlan !== 'free', plan: toPlan })
+        body: JSON.stringify({ ...settings, is_pro: isProPlan, plan: toPlan })
       })
       .then(res => res.json())
       .then(() => {
         setLoading(false);
         setStep('success');
-        onUpdate({ ...settings, is_pro: toPlan !== 'free', plan: toPlan });
+        onUpdate({ ...settings, is_pro: isProPlan, plan: toPlan });
       });
     }, 2500);
   };
@@ -591,9 +624,10 @@ function DemoUpgradeView({ settings, onUpdate, onBack, selectedPlan }) {
 
 
 function Sidebar({ activeView, setView, plan, isCollapsed, onToggle }) {
+  const isProAWS = plan === 'pro' || plan === 'pro_plus' || plan === 'agency';
   const menuItems = [
     { id: 'dashboard', label: 'Overview', icon: LayoutDashboard },
-    { id: 'recovery', label: 'Cloud Recovery', icon: RefreshCw, badge: plan !== 'free' ? 'Pro+' : null },
+    { id: 'recovery', label: isProAWS ? 'Cloud Recovery' : 'Site Recovery', icon: RefreshCw, badge: plan !== 'free' ? (isProAWS ? 'Pro AWS' : 'Active') : null },
     { id: 'performance', label: 'Performance', icon: Zap },
     { id: 'notifications', label: 'Security Alerts', icon: BellRing },
     { id: 'settings', label: 'Global Settings', icon: Settings },
@@ -643,7 +677,8 @@ function Sidebar({ activeView, setView, plan, isCollapsed, onToggle }) {
   );
 }
 
-function OverviewPage({ health, pagespeed, onSync, loading, setView }) {
+function OverviewPage({ health, pagespeed, onSync, loading, setView, plan }) {
+  const isFree = plan === 'free';
   return (
     <div className="barq-main">
       <header className="barq-header">
@@ -661,7 +696,15 @@ function OverviewPage({ health, pagespeed, onSync, loading, setView }) {
           <div className="barq-grid">
             <StatusCard title="Server Status" value={health.status.toUpperCase()} status={health.status} icon={Server} time={`Last Sync: ${health.timestamp}`} />
             <StatusCard title="Disk Usage" value={health.metrics.disk_usage.value} status={health.metrics.disk_usage.status} icon={HardDrive} time={`Total: ${health.metrics.disk_usage.total}`} />
-            <StatusCard title="PageSpeed" value={pagespeed?.current ? `${pagespeed.current.mobile.score}%` : 'N/A'} status={pagespeed?.current ? (pagespeed.current.mobile.score > 80 ? 'healthy' : 'warning') : 'warning'} icon={Zap} time="Mobile Performance Score" />
+            <StatusCard 
+              title="PageSpeed" 
+              value={pagespeed?.current ? `${pagespeed.current.mobile.score}%` : 'N/A'} 
+              status={pagespeed?.current ? (pagespeed.current.mobile.score > 80 ? 'healthy' : 'warning') : 'warning'} 
+              icon={Zap} 
+              time="Mobile Performance Score" 
+              locked={isFree}
+              onUnlock={() => setView('upgrade')}
+            />
           </div>
         ) : (
           <div style={{ textAlign: 'center', padding: '4rem' }}>
@@ -670,7 +713,31 @@ function OverviewPage({ health, pagespeed, onSync, loading, setView }) {
         )}
       </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', position: 'relative' }}>
+        {isFree && (
+          <div style={{
+            position: 'absolute',
+            inset: 0,
+            background: 'rgba(255, 255, 255, 0.85)',
+            backdropFilter: 'blur(4px)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 20,
+            borderRadius: '1.5rem',
+            border: '1px solid var(--glass-border)',
+            gap: '1rem',
+            padding: '2rem'
+          }}>
+            <ShieldAlert size={36} color="var(--primary)" />
+            <div style={{ textAlign: 'center' }}>
+              <h3 style={{ margin: '0 0 0.5rem 0' }}>Security Monitoring & Activity Log Locked</h3>
+              <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Upgrade to Premium or Pro to enable automated security scans and event tracking.</p>
+            </div>
+            <button className="barq-btn barq-btn-primary" onClick={() => setView('upgrade')}>View Plans</button>
+          </div>
+        )}
         <div className="barq-card">
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.5rem' }}>
             <ShieldAlert size={24} color="var(--primary)" />
@@ -702,47 +769,122 @@ function OverviewPage({ health, pagespeed, onSync, loading, setView }) {
   );
 }
 
-function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStatus }) {
+function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStatus, setView, backupsList, onListRefresh }) {
+  const plan = settings?.plan || 'free';
+  const isFree = plan === 'free';
+  const isAws = plan === 'pro' || plan === 'pro_plus' || plan === 'agency';
+
   return (
     <div className="barq-main">
       <header className="barq-header">
         <div>
-          <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0 }}>Cloud Recovery</h2>
-          <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>Manage your S3 snapshots and instant recovery.</p>
+          <h2 style={{ fontSize: '1.75rem', fontWeight: 700, margin: 0 }}>
+            {isAws ? 'Cloud Recovery' : 'Site Recovery'}
+          </h2>
+          <p style={{ color: 'var(--text-secondary)', margin: '0.25rem 0 0 0' }}>
+            {isAws ? 'Manage your S3 snapshots and instant recovery.' : (isFree ? 'Manage backups and restore points.' : 'Manage local snapshots and instant recovery.')}
+          </p>
         </div>
+        {!isFree && onListRefresh && (
+          <button className="barq-btn barq-btn-outline" onClick={onListRefresh}>
+            <RefreshCw size={18} /> Refresh Backups
+          </button>
+        )}
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2.5rem' }}>
-        <div className="barq-card" style={{ padding: '2.5rem', textAlign: 'center' }}>
-          <Database size={64} color="var(--primary)" style={{ marginBottom: '1.5rem' }} />
-          <h3>Manual Site Snapshot</h3>
-          <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto 2rem' }}>
-            Create a complete backup of your database and files, stored in your managed S3 vault.
+      {isFree ? (
+        <div className="barq-card" style={{ padding: '4rem 2rem', textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <Database size={64} color="var(--text-muted)" style={{ marginBottom: '1.5rem', opacity: 0.5 }} />
+          <h2>Recovery Features Locked</h2>
+          <p style={{ color: 'var(--text-secondary)', maxWidth: '500px', margin: '0.5rem auto 2rem' }}>
+            Backups are not included in the Free plan. Upgrade to Freemium for free local backups, Premium for automatic daily backups, or Pro for off-site AWS S3 cloud recovery.
           </p>
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-             <button className="barq-btn barq-btn-primary" onClick={onBackup} disabled={settings?.plan === 'free'}>
-               <Play size={18} /> {settings?.plan === 'free' ? 'Upgrade to Pro+' : 'Start Backup'}
-             </button>
-             <button className="barq-btn barq-btn-outline" onClick={onRestore} disabled={settings?.plan === 'free'}>
-               <RefreshCw size={18} /> 1-Click Restore
-             </button>
-          </div>
+          <button className="barq-btn barq-btn-primary" onClick={() => setView('upgrade')}>View Upgrades</button>
         </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2.5rem' }}>
+          <div className="barq-card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+            <Database size={64} color="var(--primary)" style={{ marginBottom: '1.5rem' }} />
+            <h3>{isAws ? 'AWS Cloud Snapshot' : 'Local Site Snapshot'}</h3>
+            <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto 2rem' }}>
+              {isAws 
+                ? 'Create a complete backup of your database and files, stored in your managed S3 vault.'
+                : 'Create a local backup archive of your database and files stored securely on this server.'}
+            </p>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+               <button className="barq-btn barq-btn-primary" onClick={() => onBackup()}>
+                 <Play size={18} /> Start Backup
+               </button>
+               <button className="barq-btn barq-btn-outline" onClick={() => onRestore()} disabled={!backupsList || backupsList.length === 0}>
+                 <RefreshCw size={18} /> Restore Latest
+               </button>
+            </div>
+          </div>
 
-        <div className="barq-card">
-          <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>Statistics</h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            <div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Storage Quota</span>
-              <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>{settings?.plan === 'agency' ? '5GB' : (settings?.plan === 'pro_plus' ? '2GB' : '500MB')}</p>
-            </div>
-            <div>
-              <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Status</span>
-              <p style={{ margin: 0, fontSize: '1rem', fontWeight: 500, color: 'var(--healthy)' }}>Managed AWS Active</p>
+          <div className="barq-card">
+            <h3 style={{ marginBottom: '1.5rem', fontSize: '1.1rem' }}>Statistics</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+              <div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Storage Quota</span>
+                <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
+                  {plan === 'premium_30k' ? '5GB' : (plan === 'freemium' ? '500MB' : (plan === 'agency' ? '5GB' : (plan === 'pro_plus' ? '2GB' : '500MB')))}
+                </p>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Status</span>
+                <p style={{ margin: 0, fontSize: '1.05rem', fontWeight: 600, color: 'var(--healthy)' }}>
+                  {isAws ? 'Managed AWS Active' : 'Local Storage Active'}
+                </p>
+              </div>
+              <div>
+                <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Plan Tier</span>
+                <p style={{ margin: 0, fontSize: '1rem', fontWeight: 500, textTransform: 'uppercase', color: 'var(--primary)' }}>
+                  {plan}
+                </p>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {!isFree && (
+        <section className="barq-card" style={{ marginTop: '2.5rem' }}>
+          <h2 style={{ fontSize: '1.3rem', marginBottom: '1.5rem' }}>Backup Archives ({isAws ? 'Amazon S3' : 'Local Storage'})</h2>
+          <div className="barq-table-wrapper">
+            <table className="barq-table">
+              <thead>
+                <tr>
+                  <th>Archive Filename</th>
+                  <th>Creation Date</th>
+                  <th>File Size</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {backupsList && backupsList.map((backup, idx) => (
+                  <tr key={idx}>
+                    <td style={{ fontWeight: 600, color: 'var(--text-main)' }}>{backup.key}</td>
+                    <td>{backup.date}</td>
+                    <td>{(backup.size / 1024 / 1024).toFixed(1)} MB</td>
+                    <td>
+                      <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={() => onRestore(backup.key)}>
+                        Restore Point
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+                {(!backupsList || backupsList.length === 0) && (
+                  <tr>
+                    <td colSpan="4" style={{ textAlign: 'center', padding: '3rem', color: 'var(--text-muted)' }}>
+                      No backup points found. Start a backup above.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
@@ -802,10 +944,12 @@ function App() {
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [modal, setModal] = useState({ isOpen: false, title: '', status: '', steps: [], currentStep: 0, error: '' });
+  const [backupsList, setBackupsList] = useState([]);
 
   useEffect(() => {
     fetchSettings();
     fetchHealth();
+    fetchBackups();
   }, []);
 
   const fetchSettings = () => {
@@ -849,9 +993,35 @@ function App() {
       .catch(err => console.error(err));
   };
 
+  const fetchBackups = () => {
+    fetch(`${apiBase}/backups`, {
+      headers: { 'X-WP-Nonce': window.wpApiSettings?.nonce }
+    })
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data)) {
+          setBackupsList(data);
+        }
+      })
+      .catch(err => console.error('Error fetching backups:', err));
+  };
+
   const handleRunBackup = () => {
-    const steps = ['Initializing environment', 'Dumping database', 'Compressing site files', 'Uploading to Amazon S3', 'Finalizing recovery package'];
-    setModal({ isOpen: true, title: 'Cloud Backup In Progress', status: steps[0], steps, currentStep: 0, error: '' });
+    const plan = settings?.plan || 'free';
+    const isAws = plan === 'pro' || plan === 'pro_plus' || plan === 'agency';
+    
+    const steps = isAws
+      ? ['Initializing environment', 'Dumping database', 'Compressing site files', 'Uploading to Amazon S3', 'Finalizing recovery package']
+      : ['Initializing environment', 'Dumping database', 'Compressing site files', 'Verifying integrity', 'Saving recovery package'];
+
+    setModal({ 
+      isOpen: true, 
+      title: isAws ? 'Cloud Backup In Progress' : 'Local Backup In Progress', 
+      status: steps[0], 
+      steps, 
+      currentStep: 0, 
+      error: '' 
+    });
 
     const updateStep = (idx, status) => setModal(m => ({ ...m, currentStep: idx, status: status || steps[idx] }));
 
@@ -863,17 +1033,18 @@ function App() {
     })
       .then(res => res.json())
       .then(data => {
-        if (data.success) {
+        if (data.success || (data.file && !data.error)) {
           updateStep(2);
           setTimeout(() => updateStep(3), 1000);
           setTimeout(() => updateStep(4), 2000);
           setTimeout(() => {
             updateStep(5, 'Backup completed successfully!');
             setBackupStatus('Backup completed successfully!');
+            fetchBackups();
             setTimeout(() => setBackupStatus(''), 5000);
           }, 3000);
         } else {
-          setModal(m => ({ ...m, error: data.message || 'Backup failed. Check S3 credentials and bucket name.' }));
+          setModal(m => ({ ...m, error: data.message || 'Backup failed. Ensure folder write permissions are enabled.' }));
         }
       })
       .catch((err) => {
@@ -882,15 +1053,32 @@ function App() {
       });
   };
 
-  const handleRunRestore = () => {
-    const steps = ['Connecting to S3', 'Downloading recovery vault', 'Extracting archives', 'Restoring database', 'Syncing file system'];
-    setModal({ isOpen: true, title: 'System Recovery In Progress', status: steps[0], steps, currentStep: 0, error: '' });
+  const handleRunRestore = (backupKey = '') => {
+    const plan = settings?.plan || 'free';
+    const isAws = plan === 'pro' || plan === 'pro_plus' || plan === 'agency';
+    
+    const steps = isAws
+      ? ['Connecting to S3', 'Downloading recovery vault', 'Extracting archives', 'Restoring database', 'Syncing file system']
+      : ['Locating recovery archive', 'Verifying compression', 'Extracting archives', 'Restoring database', 'Syncing file system'];
+
+    setModal({ 
+      isOpen: true, 
+      title: isAws ? 'System Recovery In Progress' : 'Local Restore In Progress', 
+      status: steps[0], 
+      steps, 
+      currentStep: 0, 
+      error: '' 
+    });
 
     const updateStep = (idx, status) => setModal(m => ({ ...m, currentStep: idx, status: status || steps[idx] }));
 
     fetch(`${apiBase}/restore`, {
       method: 'POST',
-      headers: { 'X-WP-Nonce': window.wpApiSettings?.nonce }
+      headers: { 
+        'Content-Type': 'application/json',
+        'X-WP-Nonce': window.wpApiSettings?.nonce 
+      },
+      body: JSON.stringify({ key: backupKey })
     })
       .then(res => res.json())
       .then(data => {
@@ -906,7 +1094,7 @@ function App() {
             fetchHealth();
           }, 6000);
         } else {
-          setModal(m => ({ ...m, error: data.message || 'Recovery failed. Verify S3 connectivity.' }));
+          setModal(m => ({ ...m, error: data.message || 'Recovery failed.' }));
         }
       })
       .catch(() => setModal(m => ({ ...m, error: 'Network error occurred during recovery.' })));
@@ -945,14 +1133,14 @@ function App() {
           onToggle={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
         />
         <div style={{ flex: 1, overflowY: 'auto' }}>
-          {view === 'dashboard' && <OverviewPage health={health} pagespeed={pagespeed} onSync={fetchHealth} loading={loading} setView={setView} />}
-          {view === 'recovery' && <RecoveryPage settings={settings} onBackup={handleRunBackup} onRestore={handleRunRestore} backupStatus={backupStatus} restoreStatus={restoreStatus} />}
+          {view === 'dashboard' && <OverviewPage health={health} pagespeed={pagespeed} onSync={fetchHealth} loading={loading} setView={setView} plan={settings?.plan || 'free'} />}
+          {view === 'recovery' && <RecoveryPage settings={settings} onBackup={handleRunBackup} onRestore={handleRunRestore} backupStatus={backupStatus} restoreStatus={restoreStatus} setView={setView} backupsList={backupsList} onListRefresh={fetchBackups} />}
           {view === 'performance' && <PerformancePage pagespeed={pagespeed} onAudit={handleRunAudit} auditStatus={auditStatus} setView={setView} />}
           {view === 'settings' && <SettingsView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} />}
           {view === 'notifications' && <NotificationsView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} />}
           {view === 'report' && <ReportView pagespeed={pagespeed} onBack={() => setView('dashboard')} />}
           {view === 'upgrade' && <UpgradeView onBack={() => setView('dashboard')} onDemoUpgrade={(plan) => { setSelectedPlan(plan); setView('demo'); }} />}
-          {view === 'demo' && <DemoUpgradeView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} selectedPlan={selectedPlan} />}
+          {view === 'demo' && <DemoUpgradeView settings={settings} onUpdate={(s) => { setSettings(s); fetchBackups(); }} onBack={() => setView('dashboard')} selectedPlan={selectedPlan} />}
         </div>
       </div>
     );
