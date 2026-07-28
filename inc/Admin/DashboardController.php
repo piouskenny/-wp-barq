@@ -27,8 +27,8 @@ class DashboardController {
         );
         add_submenu_page(
             'wp-barq',
-            __( 'Upgrade to Pro', 'wp-barq' ),
-            __( 'Upgrade to Pro', 'wp-barq' ),
+            __( 'Pricing & Plans', 'wp-barq' ),
+            __( 'Pricing & Plans', 'wp-barq' ),
             'manage_options',
             'wp-barq-upgrade',
             [$this, 'render_dashboard']
