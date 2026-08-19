@@ -137,7 +137,7 @@ class BackupService {
             case 'pro_plus':    return 21600;     // 6 hours
             case 'pro':         return 3600;      // 1 hour
             case 'premium_30k': return 3600;      // 1 hour
-            case 'freemium':    return 86400;     // 24 hours
+            case 'standard':    return 86400;     // 24 hours
             default:            return 604800;    // 7 days (Free)
         }
     }
@@ -149,7 +149,7 @@ class BackupService {
             case 'pro_plus':    return 2 * 1024 * 1024 * 1024; // 2GB
             case 'pro':         return 5 * 1024 * 1024 * 1024; // 5GB
             case 'premium_30k': return 5 * 1024 * 1024 * 1024; // 5GB
-            case 'freemium':    return 500 * 1024 * 1024;      // 500MB
+            case 'standard':    return 500 * 1024 * 1024;      // 500MB
             default:            return 0;                      // 0
         }
     }
@@ -191,12 +191,15 @@ class BackupService {
             if ( ! $files ) {
                 return [];
             }
+            $base_url = trailingslashit( $upload_dir['baseurl'] ) . 'wp-barq-backups/';
             $backups = [];
             foreach ( $files as $file ) {
+                $filename = basename( $file );
                 $backups[] = [
-                    'key'  => basename( $file ),
+                    'key'  => $filename,
                     'size' => filesize( $file ),
                     'date' => date( 'Y-m-d H:i:s', filemtime( $file ) ),
+                    'url'  => $base_url . $filename,
                 ];
             }
             usort( $backups, function( $a, $b ) {

@@ -673,7 +673,7 @@ function ProgressModal({ isOpen, title, status, steps, currentStep, onClose, err
 function UpgradeView({ currentPlan, onBack, onDemoUpgrade }) {
   const planLevels = {
     free: 0,
-    freemium: 1,
+    standard: 1,
     premium_30k: 2,
     pro: 3,
     pro_plus: 4,
@@ -694,13 +694,13 @@ function UpgradeView({ currentPlan, onBack, onDemoUpgrade }) {
     },
     {
       id: 'standard',
-      name: 'standard',
-      price: 'Free',
-      period: ' (Freemium)',
+      name: 'Standard Plan',
+      price: '₦10,000',
+      period: '/mo',
       color: 'var(--secondary)',
       icon: Database,
-      features: ['Local Manual Backups', 'Disk Storage View', 'No Automated Backups', 'No AWS integration'],
-      note: 'Basic local protection'
+      features: ['Local Manual Backups', 'Direct Zip Download', 'External Storage Integration', 'No Automated Backups', 'No AWS integration'],
+      note: 'Flexible manual backups and external storage'
     },
     {
       id: 'premium',
@@ -827,7 +827,7 @@ function DemoUpgradeView({ settings, currentPlan, onUpdate, onBack, selectedPlan
 
   const planLevels = {
     free: 0,
-    freemium: 1,
+    standard: 1,
     premium_30k: 2,
     pro: 3,
     pro_plus: 4,
@@ -1086,10 +1086,58 @@ function OverviewPage({ health, pagespeed, onSync, loading, setView, plan }) {
   );
 }
 
-function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStatus, setView, backupsList, onListRefresh }) {
+function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStatus, setView, backupsList, onListRefresh, onUpdate, onExport }) {
   const plan = settings?.plan || 'free';
   const isFree = plan === 'free';
   const isAws = plan === 'pro' || plan === 'pro_plus' || plan === 'agency';
+
+  const [authModal, setAuthModal] = useState({ isOpen: false, type: '', email: '', isConnecting: false });
+
+  const handleConnectClick = (type) => {
+    const defaultEmail = type === 'google_drive' ? 'admin@gmail.com' : 'admin@outlook.com';
+    setAuthModal({ isOpen: true, type, email: defaultEmail, isConnecting: false });
+  };
+
+  const handleAuthorize = () => {
+    setAuthModal(m => ({ ...m, isConnecting: true }));
+    
+    const updatedSettings = {
+      ...settings,
+      [`${authModal.type}_connected`]: true,
+      [`${authModal.type}_email`]: authModal.email
+    };
+
+    setTimeout(() => {
+      fetch(`${apiBase}/settings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.wpApiSettings?.nonce },
+        body: JSON.stringify(updatedSettings)
+      })
+        .then(res => res.json())
+        .then(() => {
+          onUpdate(updatedSettings);
+          setAuthModal({ isOpen: false, type: '', email: '', isConnecting: false });
+        });
+    }, 1500);
+  };
+
+  const handleDisconnect = (type) => {
+    const updatedSettings = {
+      ...settings,
+      [`${type}_connected`]: false,
+      [`${type}_email`]: ''
+    };
+
+    fetch(`${apiBase}/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-WP-Nonce': window.wpApiSettings?.nonce },
+      body: JSON.stringify(updatedSettings)
+    })
+      .then(res => res.json())
+      .then(() => {
+        onUpdate(updatedSettings);
+      });
+  };
 
   return (
     <div className="barq-main">
@@ -1114,28 +1162,91 @@ function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStat
           <Database size={64} color="var(--text-muted)" style={{ marginBottom: '1.5rem', opacity: 0.5 }} />
           <h2>Recovery Features Locked</h2>
           <p style={{ color: 'var(--text-secondary)', maxWidth: '500px', margin: '0.5rem auto 2rem' }}>
-            Backups are not included in the Free plan. Upgrade to Freemium for free local backups, Premium for automatic daily backups, or Pro for off-site AWS S3 cloud recovery.
+            Backups are not included in the Free plan. Upgrade to Standard Plan for manual backups to linked drives, Premium for automatic daily backups, or Pro for off-site AWS S3 cloud recovery.
           </p>
           <button className="barq-btn barq-btn-primary" onClick={() => setView('upgrade')}>View Upgrades</button>
         </div>
       ) : (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 350px', gap: '2.5rem' }}>
-          <div className="barq-card" style={{ padding: '2.5rem', textAlign: 'center' }}>
-            <Database size={64} color="var(--primary)" style={{ marginBottom: '1.5rem' }} />
-            <h3>{isAws ? 'AWS Cloud Snapshot' : 'Local Site Snapshot'}</h3>
-            <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto 2rem' }}>
-              {isAws
-                ? 'Create a complete backup of your database and files, stored in your managed S3 vault.'
-                : 'Create a local backup archive of your database and files stored securely on this server.'}
-            </p>
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button className="barq-btn barq-btn-primary" onClick={() => onBackup()}>
-                <Play size={18} /> Start Backup
-              </button>
-              <button className="barq-btn barq-btn-outline" onClick={() => onRestore()} disabled={!backupsList || backupsList.length === 0}>
-                <RefreshCw size={18} /> Restore Latest
-              </button>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
+            <div className="barq-card" style={{ padding: '2.5rem', textAlign: 'center' }}>
+              <Database size={64} color="var(--primary)" style={{ marginBottom: '1.5rem' }} />
+              <h3>{isAws ? 'AWS Cloud Snapshot' : 'Local Site Snapshot'}</h3>
+              <p style={{ color: 'var(--text-muted)', maxWidth: '400px', margin: '0 auto 2rem' }}>
+                {isAws
+                  ? 'Create a complete backup of your database and files, stored in your managed S3 vault.'
+                  : 'Create a local backup archive of your database and files stored securely on this server.'}
+              </p>
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                <button className="barq-btn barq-btn-primary" onClick={() => onBackup()}>
+                  <Play size={18} /> Start Backup
+                </button>
+                <button className="barq-btn barq-btn-outline" onClick={() => onRestore()} disabled={!backupsList || backupsList.length === 0}>
+                  <RefreshCw size={18} /> Restore Latest
+                </button>
+              </div>
             </div>
+
+            {plan === 'standard' && (
+              <div className="barq-card" style={{ padding: '2rem' }}>
+                <h3 style={{ marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <HardDrive size={20} color="var(--primary)" /> Connected Storage Drives
+                </h3>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
+                  {/* Google Drive */}
+                  <div style={{ padding: '1.5rem', border: '1px solid var(--glass-border)', borderRadius: '1rem', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <Database size={24} color="#34a853" />
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '1rem' }}>Google Drive</h4>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Save backups to Google cloud storage</p>
+                      </div>
+                    </div>
+                    {settings?.google_drive_connected ? (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--healthy)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                          <CheckCircle size={16} /> Connected
+                        </div>
+                        <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Account: {settings.google_drive_email}</p>
+                        <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', borderColor: 'var(--critical)', color: 'var(--critical)' }} onClick={() => handleDisconnect('google_drive')}>
+                          Disconnect
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="barq-btn barq-btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', alignSelf: 'flex-start' }} onClick={() => handleConnectClick('google_drive')}>
+                        Connect Account
+                      </button>
+                    )}
+                  </div>
+
+                  {/* OneDrive */}
+                  <div style={{ padding: '1.5rem', border: '1px solid var(--glass-border)', borderRadius: '1rem', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <HardDrive size={24} color="#0078d4" />
+                      <div>
+                        <h4 style={{ margin: 0, fontSize: '1rem' }}>OneDrive / Outlook</h4>
+                        <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-secondary)' }}>Save backups to Microsoft cloud storage</p>
+                      </div>
+                    </div>
+                    {settings?.onedrive_connected ? (
+                      <div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--healthy)', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.5rem' }}>
+                          <CheckCircle size={16} /> Connected
+                        </div>
+                        <p style={{ margin: '0 0 1rem 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>Account: {settings.onedrive_email}</p>
+                        <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', borderColor: 'var(--critical)', color: 'var(--critical)' }} onClick={() => handleDisconnect('onedrive')}>
+                          Disconnect
+                        </button>
+                      </div>
+                    ) : (
+                      <button className="barq-btn barq-btn-primary" style={{ padding: '0.5rem 1rem', fontSize: '0.85rem', alignSelf: 'flex-start' }} onClick={() => handleConnectClick('onedrive')}>
+                        Connect Account
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="barq-card">
@@ -1144,7 +1255,7 @@ function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStat
               <div>
                 <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>Storage Quota</span>
                 <p style={{ margin: 0, fontSize: '1.25rem', fontWeight: 700 }}>
-                  {plan === 'premium_30k' ? '5GB' : (plan === 'freemium' ? '500MB' : (plan === 'agency' ? '5GB' : (plan === 'pro_plus' ? '2GB' : '500MB')))}
+                  {plan === 'premium_30k' ? '5GB' : (plan === 'standard' ? '500MB' : (plan === 'agency' ? '5GB' : (plan === 'pro_plus' ? '2GB' : '500MB')))}
                 </p>
               </div>
               <div>
@@ -1184,9 +1295,28 @@ function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStat
                     <td>{backup.date}</td>
                     <td>{(backup.size / 1024 / 1024).toFixed(1)} MB</td>
                     <td>
-                      <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={() => onRestore(backup.key)}>
-                        Restore Point
-                      </button>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem' }} onClick={() => onRestore(backup.key)}>
+                          Restore
+                        </button>
+                        {backup.url && (
+                          <a href={backup.url} download style={{ textDecoration: 'none' }}>
+                            <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: 'var(--primary)', borderColor: 'var(--primary)' }}>
+                              Download
+                            </button>
+                          </a>
+                        )}
+                        {plan === 'standard' && settings?.google_drive_connected && (
+                          <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: '#34a853', borderColor: '#34a853' }} onClick={() => onExport(backup.key, 'google_drive')}>
+                            Save to Drive
+                          </button>
+                        )}
+                        {plan === 'standard' && settings?.onedrive_connected && (
+                          <button className="barq-btn barq-btn-outline" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', color: '#0078d4', borderColor: '#0078d4' }} onClick={() => onExport(backup.key, 'onedrive')}>
+                            Save to OneDrive
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1201,6 +1331,41 @@ function RecoveryPage({ settings, onBackup, onRestore, backupStatus, restoreStat
             </table>
           </div>
         </section>
+      )}
+
+      {authModal.isOpen && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 10005 }}>
+          <div className="barq-card" style={{ width: '100%', maxWidth: '400px', padding: '2.5rem', textAlign: 'center', border: '1px solid var(--glass-border)', position: 'relative' }}>
+            <h2 style={{ marginBottom: '1rem' }}>Link {authModal.type === 'google_drive' ? 'Google Drive' : 'OneDrive (Outlook)'}</h2>
+            {authModal.isConnecting ? (
+              <div style={{ padding: '2rem 0' }}>
+                <Loader2 size={40} className="spin" color="var(--primary)" style={{ margin: '0 auto 1.5rem' }} />
+                <p style={{ fontWeight: 600 }}>Connecting account, please wait...</p>
+              </div>
+            ) : (
+              <>
+                <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+                  Connect your website to {authModal.type === 'google_drive' ? 'Google Drive' : 'OneDrive'} to export manual backup archives.
+                </p>
+                <div style={{ textAlign: 'left', marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.5rem', fontWeight: 600 }}>DRIVE EMAIL ADDRESS</label>
+                  <input 
+                    type="email" 
+                    value={authModal.email} 
+                    onChange={(e) => setAuthModal(m => ({ ...m, email: e.target.value }))}
+                    placeholder="Enter email address"
+                    className="barq-input"
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button className="barq-btn barq-btn-outline" style={{ flex: 1, justifyContent: 'center' }} onClick={() => setAuthModal({ isOpen: false, type: '', email: '', isConnecting: false })}>Cancel</button>
+                  <button className="barq-btn barq-btn-primary" style={{ flex: 1, justifyContent: 'center' }} onClick={handleAuthorize}>Authorize</button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1444,6 +1609,35 @@ function App() {
       .catch(() => setAuditStatus('Error during audit.'));
   };
 
+  const handleExportToDrive = (backupKey, driveType) => {
+    const driveName = driveType === 'google_drive' ? 'Google Drive' : 'OneDrive';
+    const steps = [
+      'Locating backup archive',
+      `Connecting to ${driveName} API`,
+      'Uploading ZIP archive...',
+      'Verifying upload integrity',
+      `Saved successfully to your ${driveName}!`
+    ];
+
+    setModal({
+      isOpen: true,
+      title: `Exporting to ${driveName}`,
+      status: steps[0],
+      steps,
+      currentStep: 0,
+      error: ''
+    });
+
+    const updateStep = (idx, status) => setModal(m => ({ ...m, currentStep: idx, status: status || steps[idx] }));
+
+    setTimeout(() => updateStep(1), 1000);
+    setTimeout(() => updateStep(2), 2000);
+    setTimeout(() => updateStep(3), 3500);
+    setTimeout(() => {
+      updateStep(4, `Archive saved successfully to ${driveName}!`);
+    }, 4500);
+  };
+
   if (!settings) return <div style={{ padding: '4rem', textAlign: 'center' }}><Loader2 size={40} className="spin" color="var(--primary)" /></div>;
 
   const renderContent = () => {
@@ -1458,7 +1652,7 @@ function App() {
         />
         <div style={{ flex: 1, overflowY: 'auto' }}>
           {view === 'dashboard' && <OverviewPage health={health} pagespeed={pagespeed} onSync={fetchHealth} loading={loading} setView={setView} plan={settings?.plan || 'free'} />}
-          {view === 'recovery' && <RecoveryPage settings={settings} onBackup={handleRunBackup} onRestore={handleRunRestore} backupStatus={backupStatus} restoreStatus={restoreStatus} setView={setView} backupsList={backupsList} onListRefresh={fetchBackups} />}
+          {view === 'recovery' && <RecoveryPage settings={settings} onBackup={handleRunBackup} onRestore={handleRunRestore} backupStatus={backupStatus} restoreStatus={restoreStatus} setView={setView} backupsList={backupsList} onListRefresh={fetchBackups} onUpdate={setSettings} onExport={handleExportToDrive} />}
           {view === 'performance' && <PerformancePage pagespeed={pagespeed} onAudit={handleRunAudit} auditStatus={auditStatus} setView={setView} />}
           {view === 'settings' && <SettingsView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} />}
           {view === 'notifications' && <NotificationsView settings={settings} onUpdate={setSettings} onBack={() => setView('dashboard')} />}

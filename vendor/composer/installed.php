@@ -3,7 +3,7 @@
         'name' => 'wp_barq/wp_barq',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => 'bcad5d2af4e09ec2c12f70be9df9a5d5168a0495',
+        'reference' => '1e52140050452ac951245682be64a5bfa9e7c6bb',
         'type' => 'wordpress-plugin',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -157,7 +157,7 @@
         'wp_barq/wp_barq' => array(
             'pretty_version' => 'dev-main',
             'version' => 'dev-main',
-            'reference' => 'bcad5d2af4e09ec2c12f70be9df9a5d5168a0495',
+            'reference' => '1e52140050452ac951245682be64a5bfa9e7c6bb',
             'type' => 'wordpress-plugin',
             'install_path' => __DIR__ . '/../../',
             'aliases' => array(),

@@ -39,8 +39,9 @@ class BackupEndpoint {
     }
 
     public function trigger_backup( $request ) {
-        if ( ! $this->is_pro ) {
-            return new \WP_Error( 'rest_forbidden', 'This feature requires a WP BARQ Pro subscription.', ['status' => 403] );
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'free' ) {
+            return new \WP_Error( 'rest_forbidden', 'Backups are not included in the Free plan.', ['status' => 403] );
         }
 
         $result = $this->backup_service->run_backup();
@@ -53,7 +54,8 @@ class BackupEndpoint {
     }
 
     public function get_backups( $request ) {
-        if ( ! $this->is_pro ) {
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'free' ) {
             return rest_ensure_response([]);
         }
 
@@ -62,8 +64,9 @@ class BackupEndpoint {
     }
 
     public function trigger_restore( $request ) {
-        if ( ! $this->is_pro ) {
-            return new \WP_Error( 'rest_forbidden', 'This feature requires a WP BARQ Pro subscription.', ['status' => 403] );
+        $plan = get_option( 'wp_barq_plan', 'free' );
+        if ( $plan === 'free' ) {
+            return new \WP_Error( 'rest_forbidden', 'Restore feature requires a subscription.', ['status' => 403] );
         }
 
         $params = $request->get_params();

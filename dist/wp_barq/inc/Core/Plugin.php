@@ -21,7 +21,8 @@ class Plugin {
         $this->service_manager = new ServiceManager();
 
         // --- Resolve options and core services first ---
-        $is_pro     = get_option( 'wp_barq_is_pro', false );
+        $plan       = get_option( 'wp_barq_plan', 'free' );
+        $is_pro     = in_array( $plan, [ 'pro', 'pro_plus', 'agency' ], true ) || get_option( 'wp_barq_is_pro', false );
         $pro_emails = get_option( 'wp_barq_pro_emails', '' );
 
         $notification_service = new \WpBarq\Services\NotificationService( $is_pro, $pro_emails );

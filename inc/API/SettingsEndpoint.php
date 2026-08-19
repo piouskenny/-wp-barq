@@ -40,6 +40,10 @@ class SettingsEndpoint {
             's3_access_key'   => get_option( 'wp_barq_s3_access_key', '' ),
             's3_secret_key'   => get_option( 'wp_barq_s3_secret_key' ) ? '********' : '',
             's3_bucket'       => get_option( 'wp_barq_s3_bucket', '' ),
+            'google_drive_connected' => (bool) get_option( 'wp_barq_google_drive_connected', false ),
+            'google_drive_email'     => get_option( 'wp_barq_google_drive_email', '' ),
+            'onedrive_connected'     => (bool) get_option( 'wp_barq_onedrive_connected', false ),
+            'onedrive_email'         => get_option( 'wp_barq_onedrive_email', '' ),
         ]);
     }
 
@@ -50,12 +54,19 @@ class SettingsEndpoint {
             'is_pro', 'plan', 'pro_emails',
             'monitor_faults', 'monitor_backups', 'monitor_health',
             'sns_faults', 'sns_backups', 'sns_health',
-            's3_region', 's3_access_key', 's3_secret_key', 's3_bucket'
+            's3_region', 's3_access_key', 's3_secret_key', 's3_bucket',
+            'google_drive_connected', 'google_drive_email',
+            'onedrive_connected', 'onedrive_email'
         ];
 
         foreach ( $keys as $key ) {
             if ( isset( $params[$key] ) ) {
-                $value = sanitize_text_field( $params[$key] );
+                $value = $params[$key];
+                if ( is_bool( $value ) ) {
+                    $value = $value ? '1' : '0';
+                } else {
+                    $value = sanitize_text_field( $value );
+                }
                 // Only update secret keys if they are not the masked string
                 if ( ( $key === 's3_secret_key' || $key === 'sns_secret_key' ) && $value === '********' ) {
                     continue;
